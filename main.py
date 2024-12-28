@@ -24,25 +24,22 @@ def create_video_from_script(split_lines):
     
     for line in split_lines:
         if line[0] != "NONE":  # 캐릭터
-            print(line[0])
             character = line[0]
             image_clip = (ImageClip(f"placeholder/{character}.png")
-                         .set_start(current_time)
-                         .set_duration(3))
+                         .with_start(current_time)
+                         .with_duration(3))
             clips.append(image_clip)
             current_time += 3
 
         if line[1] != "NONE":  # 효과
-            print(line[1])
-            current_time += 3
+            #current_time += 3
 
         if line[2] != "NONE":  # 대사
-            print(line[2])
             speak = line[2]
-            text_clip = (TextClip(text=speak, font="font/font.ttf", 
-                                font_size=20, color="black")
-                        .set_start(current_time)
-                        .set_duration(3))
+            text_clip = (TextClip(text=speak, font="font/standardKOR.ttf", 
+                                font_size=20, color="white")
+                        .with_start(current_time)
+                        .with_duration(3))
             clips.append(text_clip)
             current_time += 3
 
