@@ -20,25 +20,34 @@ for items in split_lines:
 
 def create_video_from_script(split_lines):
     clips = []  # 모든 장면을 저장할 리스트
+    current_time = 0  # 현재 시간 추적
+    
     for line in split_lines:
-        if line[0] != "NONE":#캐릭터
+        if line[0] != "NONE":  # 캐릭터
             print(line[0])
             character = line[0]
-            image_clip = ImageClip(f"placeholder/{character}.png", duration=3)  # You can create it from a path
+            image_clip = (ImageClip(f"placeholder/{character}.png")
+                         .set_start(current_time)
+                         .set_duration(3))
             clips.append(image_clip)
+            current_time += 3
 
-        if line[1] != "NONE":#효과
+        if line[1] != "NONE":  # 효과
             print(line[1])
-        if line[2] != "NONE":#대사
+            current_time += 3
+
+        if line[2] != "NONE":  # 대사
             print(line[2])
             speak = line[2]
-            text_clip = TextClip(font="font/font.ttf", text=speak, font_size=20, color="black", duration=3)
-            
+            text_clip = (TextClip(text=speak, font="font/font.ttf", 
+                                font_size=20, color="black")
+                        .set_start(current_time)
+                        .set_duration(3))
             clips.append(text_clip)
-# 
+            current_time += 3
 
     # 모든 클립을 연결
-    final_video = CompositeVideoClip(clips)
+    final_video = CompositeVideoClip(clips, size=(1280, 720))
     return final_video
 
 # 스크립트로 영상 생성
