@@ -1,6 +1,6 @@
 import os
-
-from moviepy import VideoFileClip, AudioFileClip, TextClip, CompositeVideoClip, concatenate_videoclips, ImageClip, ColorClip
+from script_spliter import spliter
+from moviepy import *
 
 # 캐릭터:정보 대응표
 # TODO:"-" 단위 파싱-> 0번째 원소로 매칭
@@ -8,18 +8,18 @@ char_table = {
     "메탄-기본":{
         "text_color":"red",
         "position":("left", "bottom"),
-        "size":(200, 150)
+        "size":0.2
     },
     
     "츠무기-기본":{
         "text_color":"green",
         "position":("right", "bottom"),
-        "size":(200, 150)
+        "size":0.2
     },
     "Narrator":{
         "text_color":"green",
         "position":("right", "bottom"),
-        "size":(200, 150)
+        "size":0.2
     },
 }
 
@@ -29,7 +29,7 @@ BGM_DIR = "./audio/bgm"  # bgm 파일 디렉토리
 CHARACTER_DIR = "./images/character"  # 캐릭터 이미지 디렉토리
 BACKGROUND_DIR = "./images/background"  # 배경 이미지 디렉토리
 OUTPUT_DIR = "./output"  # 출력 디렉토리
-SCRIPT_FILE = "./example.txt"  # 스크립트 파일
+SCRIPT_FILE = "./example_short.txt"  # 스크립트 파일
 
 # 기본 설정
 VIDEO_SIZE = (1280, 720)  # 해상도
@@ -39,6 +39,7 @@ TEXT_COLOR = "white"
 
 # 배경 파일(전역변수로 취금해 구현)
 BACKGROUND_FILE = "background1.webp"
+BGM_START = 0
 
 def parse_script(script_file):
     """스크립트 파일을 읽어 캐릭터, 대사, 효과로 분리"""
@@ -52,7 +53,7 @@ def parse_script(script_file):
             parsed_lines.append((character, dialogue, effect))
     return parsed_lines
 
-def create_clip(character=None, effect=None, dialogue=None, char_line_path=None, char_image_path=None):
+def create_clip(character=None, effect=None, dialogue=None, char_line_path=None, char_image_path=None, **kwargs):
     """캐릭터 이미지와 대사를 사용하여 개별 클립 생성"""
 
     """
@@ -64,13 +65,18 @@ def create_clip(character=None, effect=None, dialogue=None, char_line_path=None,
     char_line_clip = AudioFileClip(char_line_path)
     scene_duration = char_line_clip.duration
 
-    #크기 지정만을 위한 colorclip
-    #frame_clip = ColorClip(size=VIDEO_SIZE, color=(255, 255, 255), duration=scene_duration)
+    # BGM
+    global BGM_START
+    bgm:AudioClip = AudioFileClip("./audio/bgm/Usagi Flap.mp3").subclipped(BGM_START, BGM_START+scene_duration).with_effects([afx.MultiplyVolume(0.3)])
+    BGM_START += scene_duration
+    print(bgm.start, bgm.end)
+    # 대사+BGM 결합
+    composite_audio = CompositeAudioClip([char_line_clip, bgm])
 
-    # 배경(S T A N D  A L O N E)
+    # 배경
     back_path = os.path.join(BACKGROUND_DIR, BACKGROUND_FILE)
     background_clip = ImageClip(img=back_path, duration=scene_duration).resized(VIDEO_SIZE)
-    
+
     # 캐릭터 이미지 로드
     image_clip = (ImageClip(img=char_image_path, duration=scene_duration)
                   .resized(char_table[character]["size"]).with_position(char_table[character]["position"]))
@@ -82,6 +88,8 @@ def create_clip(character=None, effect=None, dialogue=None, char_line_path=None,
                          color=char_table[character]["text_color"],
                          size=VIDEO_SIZE,
                          method='caption',
+                         vertical_align="bottom",
+                         margin=(0, 20),
                          stroke_color="white",
                          stroke_width=3)
     text_clip = text_clip.with_duration(scene_duration).with_position("bottom")
@@ -98,7 +106,8 @@ def create_clip(character=None, effect=None, dialogue=None, char_line_path=None,
 
     # 비디오 클립에 텍스트와 음성을 결합
     final_clip = CompositeVideoClip([background_clip, image_clip, text_clip])
-    final_clip = final_clip.with_audio(char_line_clip)
+    final_clip = final_clip.with_audio(composite_audio)
+
     return final_clip
 
 def main():
@@ -108,6 +117,7 @@ def main():
 
     clips = []
     line_count = 1
+    bgm_start = 0
     for character, dialogue, effect in script:
         char_line_path = os.path.join(LINE_DIR, f"{line_count:04d}.wav") if dialogue != "None" else None
         if dialogue != "None":
@@ -132,5 +142,10 @@ def main():
     print(f"동영상 생성 완료: {output_path}")
 
 if __name__ == "__main__":
-    os.makedirs(OUTPUT_DIR, exist_ok=True)  # 출력 디렉토리 생성
-    main()
+    command = input("1.영상 제작 2.스크립트 대사 분리")
+    if command == "1":
+        os.makedirs(OUTPUT_DIR, exist_ok=True)  # 출력 디렉토리 생성
+        main()
+    elif command == "2":
+        spliter("example.txt", "output.txt")
+
