@@ -170,8 +170,19 @@ def main():
         print(f"씬 {i+1} 저장 완료: {scene_path}")
 
     # 저장된 씬들을 VideoFileClip으로 읽어서 결합
-    final_clips = [VideoFileClip(path) for path in scene_paths]
-    final_video = concatenate_videoclips(final_clips)
+    final_clips = []
+    for path in scene_paths:
+        try:
+            clip = VideoFileClip(path)
+            final_clips.append(clip)
+        except Exception as e:
+            print(f"Error loading {path}: {str(e)}")
+            continue
+    
+    if final_clips:
+        final_video = concatenate_videoclips(final_clips)
+    else:
+        raise Exception("No valid video clips found to concatenate")
     
     # 최종 영상 저장
     output_path = os.path.join(OUTPUT_DIR, "final_video.mp4")
