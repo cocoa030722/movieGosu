@@ -166,6 +166,7 @@ def main():
         
         # 개별 씬 저장
         clip.write_videofile(scene_path, fps=24)
+        clip.close()
         scene_paths.append(scene_path)
         print(f"씬 {i+1} 저장 완료: {scene_path}")
 
