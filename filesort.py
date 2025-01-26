@@ -25,7 +25,8 @@ def rename_files_in_directory(directory_path):
         os.rename(old_file_path, new_file_path)
         print(f"Renamed: {old_file_path} -> {new_file_path}")
 
+def file_sort():
 
-# 실행 예제
-directory_path = "audio/line"  # 파일이 있는 디렉토리 경로를 설정
-rename_files_in_directory(directory_path)
+    # 실행 예제
+    directory_path = "audio/line"  # 파일이 있는 디렉토리 경로를 설정
+    rename_files_in_directory(directory_path)
