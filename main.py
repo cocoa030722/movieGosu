@@ -135,12 +135,23 @@ def create_clip(character=None, effect=None, dialogue=None, char_line_path=None,
 
 def main():
     """메인 함수: 스크립트를 읽고 영상을 생성"""
+    # 중간 결과물 저장 디렉토리
+    SCENE_DIR = os.path.join(OUTPUT_DIR, "scenes")
+    os.makedirs(SCENE_DIR, exist_ok=True)
+    
     # 스크립트 파일 읽기
     script = parse_script(SCRIPT_FILE)
 
-    clips = []
+    scene_paths = []
     line_count = 1
-    for character, dialogue, effect in script:
+    for i, (character, dialogue, effect) in enumerate(script):
+        scene_path = os.path.join(SCENE_DIR, f"scene_{i:04d}.mp4")
+        
+        # 이미 생성된 씬이 있다면 스킵
+        if os.path.exists(scene_path):
+            scene_paths.append(scene_path)
+            continue
+            
         char_line_path = os.path.join(LINE_DIR, f"{line_count:04d}.wav") if dialogue != "None" else None
         if dialogue != "None":
             line_count += 1
@@ -148,20 +159,29 @@ def main():
         char_image_path = os.path.join(CHARACTER_DIR, f"{character}.png") if character != "None" else None
 
         clip = create_clip(character=character,
-                            effect=effect,
-                            dialogue=dialogue,
-                            char_line_path=char_line_path if not None else None,
-                            char_image_path=char_image_path if not None else None)
+                         effect=effect,
+                         dialogue=dialogue,
+                         char_line_path=char_line_path if not None else None,
+                         char_image_path=char_image_path if not None else None)
+        
+        # 개별 씬 저장
+        clip.write_videofile(scene_path, fps=24)
+        scene_paths.append(scene_path)
+        print(f"씬 {i+1} 저장 완료: {scene_path}")
 
-        clips.append(clip)
-    # 모든 클립을 결합
-    final_video = concatenate_videoclips(clips)
-
+    # 저장된 씬들을 VideoFileClip으로 읽어서 결합
+    final_clips = [VideoFileClip(path) for path in scene_paths]
+    final_video = concatenate_videoclips(final_clips)
     
-    # 출력 저장
+    # 최종 영상 저장
     output_path = os.path.join(OUTPUT_DIR, "final_video.mp4")
     final_video.write_videofile(output_path, fps=24)
-    print(f"동영상 생성 완료: {output_path}")
+    
+    # 메모리 정리
+    for clip in final_clips:
+        clip.close()
+        
+    print(f"최종 동영상 생성 완료: {output_path}")
 
 if __name__ == "__main__":
     command = input("1.영상 제작 2.스크립트 대사 분리 3.파일 정렬")
