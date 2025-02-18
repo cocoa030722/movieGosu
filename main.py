@@ -49,22 +49,25 @@ BACKGROUND_FILE = "background1.webp"
 bgm_start = 0
 
 def parse_script(script_file):
-    """스크립트 파일을 읽어 캐릭터, 대사, 효과로 분리"""
+    """스크립트 파일을 읽어 블록 요소와 스크립트 줄을 분리"""
     with open(script_file, "r", encoding="utf-8") as file:
         lines = file.readlines()
-    parsed_lines = []
+    
+    block_elements = []
+    script_lines = []
+    
     for line in lines:
         line = line.strip()
         if line:
-            if line.startswith("//"): #주석->무시함
+            if line.startswith("//"): # 주석->무시함
                 pass
-            elif line.startswith("#"): #블록 요소 표시
-                print(line)
+            elif line.startswith("#"): # 블록 요소 처리
+                block_elements.append(line[1:].strip())  # # 제거하고 저장
             else:
-                
                 character, dialogue, effect = line.split(":", 2)
-                parsed_lines.append((character, dialogue, effect))
-    return parsed_lines
+                script_lines.append((character, dialogue, effect))
+    
+    return block_elements, script_lines
 
 def create_clip(character=None, effect=None, dialogue=None, char_line_path=None, char_image_path=None, **kwargs):
     """캐릭터 이미지와 대사를 사용하여 개별 클립 생성"""
