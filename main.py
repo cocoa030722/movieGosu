@@ -33,7 +33,7 @@ AUDIO_EFFECT_DIR = "./audio/effect"  # 음향효과 디렉토리
 CHARACTER_DIR = "./images/character"  # 캐릭터 이미지 디렉토리
 BACKGROUND_DIR = "./images/background"  # 배경 이미지 디렉토리
 OUTPUT_DIR = "./output"  # 출력 디렉토리
-SCRIPT_FILE = "./example.txt"  # 스크립트 파일
+SCRIPT_FILE = "./example_short.txt"  # 스크립트 파일
 
 # 기본 설정
 VIDEO_SIZE = (1280, 720)  # 해상도
@@ -42,7 +42,9 @@ FONT_SIZE = 40
 TEXT_COLOR = "white"
 
 # 배경 파일(전역변수로 취급해 구현)
+BGM_FILE = "Usagi Flap.mp3"
 BACKGROUND_FILE = "background1.webp"
+
 # bgm의 시작 지점을 기록하는 변수
 bgm_start = 0
 
@@ -54,8 +56,14 @@ def parse_script(script_file):
     for line in lines:
         line = line.strip()
         if line:
-            character, dialogue, effect = line.split(":", 2)
-            parsed_lines.append((character, dialogue, effect))
+            if line.startswith("//"): #주석->무시함
+                pass
+            elif line.startswith("#"): #블록 요소 표시
+                print(line)
+            else:
+                
+                character, dialogue, effect = line.split(":", 2)
+                parsed_lines.append((character, dialogue, effect))
     return parsed_lines
 
 def create_clip(character=None, effect=None, dialogue=None, char_line_path=None, char_image_path=None, **kwargs):
@@ -70,7 +78,8 @@ def create_clip(character=None, effect=None, dialogue=None, char_line_path=None,
 
     # BGM
     global bgm_start
-    bgm_raw:AudioClip = AudioFileClip("./audio/bgm/Usagi Flap.mp3").with_effects([afx.MultiplyVolume(0.1)])
+    bgm_dir = os.path.join(BGM_DIR, BGM_FILE)
+    bgm_raw:AudioClip = AudioFileClip(bgm_dir).with_effects([afx.MultiplyVolume(0.1)])
     if bgm_start+scene_duration > bgm_raw.end:
         bgm_head = bgm_raw.subclipped(bgm_start, bgm_raw.end)
         tail_pointer = (bgm_start+scene_duration)-(bgm_raw.end)

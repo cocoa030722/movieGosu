@@ -1,5 +1,13 @@
 // scene 1
 # background:background1.webp
 # bgm:Usagi Flap.mp3
+
 메탄-기본:작별이다, 최강:None
 츠무기-기본:내가 없던 시대의 범부여:None
+
+// scene 2
+# background:back2.jpg
+# bgm:GigaChad.mp3
+
+메탄-기본:구강, 편광, 까마귀와 성명.:None
+츠무기-기본:허식 "자", <무라사키>.:None
