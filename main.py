@@ -8,7 +8,6 @@ from effect import audio_effect, highlight
 from moviepy import *
 
 # 캐릭터:정보 대응표
-# TODO:"-" 단위 파싱-> 0번째 원소로 매칭
 char_table = {
     "메탄":{
         "text_color":"red",
@@ -42,7 +41,7 @@ FONT = "font/standardKOR.ttf"  # 텍스트 폰트
 FONT_SIZE = 40
 TEXT_COLOR = "white"
 
-# 배경 파일(전역변수로 취금해 구현)
+# 배경 파일(전역변수로 취급해 구현)
 BACKGROUND_FILE = "background1.webp"
 # bgm의 시작 지점을 기록하는 변수
 bgm_start = 0
@@ -61,20 +60,14 @@ def parse_script(script_file):
 
 def create_clip(character=None, effect=None, dialogue=None, char_line_path=None, char_image_path=None, **kwargs):
     """캐릭터 이미지와 대사를 사용하여 개별 클립 생성"""
-
-    """
-    대사 주도 개발:
-    1.대사가 none이 아니라면 각 라인의 대사 파일을 최우선으로 읽어옴
-    2.대사를 기반으로 배경사진->캐릭터->자막->bgm의 지속시간을 결정
-    """
     video_clip = []
     audio_clip = []
+
     # 음성 파일 로드
     char_line_clip = AudioFileClip(char_line_path).with_effects([afx.MultiplyVolume(2.0)])
     audio_clip.append(char_line_clip)
     scene_duration = char_line_clip.duration
-    
-    
+
     # BGM
     global bgm_start
     bgm_raw:AudioClip = AudioFileClip("./audio/bgm/Usagi Flap.mp3").with_effects([afx.MultiplyVolume(0.1)])
@@ -93,13 +86,13 @@ def create_clip(character=None, effect=None, dialogue=None, char_line_path=None,
     back_path = os.path.join(BACKGROUND_DIR, BACKGROUND_FILE)
     background_clip = ImageClip(img=back_path, duration=scene_duration).resized(VIDEO_SIZE)
     video_clip.append(background_clip)
-    
+
     # 캐릭터 이미지 로드
     character = character.split("-")[0]
     image_clip = (ImageClip(img=char_image_path, duration=scene_duration)
                   .resized(char_table[character]["size"]).with_position(char_table[character]["position"]))
     video_clip.append(image_clip)
-    
+
     # 대사 텍스트 클립 생성
     text_clip = TextClip(text=dialogue,
                          font=FONT,
@@ -123,82 +116,60 @@ def create_clip(character=None, effect=None, dialogue=None, char_line_path=None,
         effect_path = os.path.join(AUDIO_EFFECT_DIR, effect[1])
         effect_clip = audio_effect(effect_path)
         audio_clip.append(effect_clip)
+
     # 대사+BGM 결합
     composite_audio = CompositeAudioClip(audio_clip)
-    
+
     # 비디오 클립에 텍스트와 음성을 결합
     final_clip = CompositeVideoClip(video_clip)
     final_clip = final_clip.with_audio(composite_audio)
-    print(final_clip.duration)
-    
+
     return final_clip
 
 def main():
     """메인 함수: 스크립트를 읽고 영상을 생성"""
-    # 중간 결과물 저장 디렉토리
-    SCENE_DIR = os.path.join(OUTPUT_DIR, "scenes")
-    os.makedirs(SCENE_DIR, exist_ok=True)
-    
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
     # 스크립트 파일 읽기
     script = parse_script(SCRIPT_FILE)
 
-    scene_paths = []
+    final_clips = []
     line_count = 1
-    for i, (character, dialogue, effect) in enumerate(script):
-        scene_path = os.path.join(SCENE_DIR, f"scene_{i:04d}.mp4")
-        
-        # 이미 생성된 씬이 있다면 스킵
-        if os.path.exists(scene_path):
-            scene_paths.append(scene_path)
-            continue
-            
+
+    for character, dialogue, effect in script:
         char_line_path = os.path.join(LINE_DIR, f"{line_count:04d}.wav") if dialogue != "None" else None
         if dialogue != "None":
             line_count += 1
-        
+
         char_image_path = os.path.join(CHARACTER_DIR, f"{character}.png") if character != "None" else None
 
         clip = create_clip(character=character,
                          effect=effect,
                          dialogue=dialogue,
-                         char_line_path=char_line_path if not None else None,
-                         char_image_path=char_image_path if not None else None)
-        
-        # 개별 씬 저장
-        clip.write_videofile(scene_path, fps=24)
-        clip.close()
-        scene_paths.append(scene_path)
-        print(f"씬 {i+1} 저장 완료: {scene_path}")
+                         char_line_path=char_line_path if char_line_path is not None else None,
+                         char_image_path=char_image_path if char_image_path is not None else None)
 
-    # 저장된 씬들을 VideoFileClip으로 읽어서 결합
-    final_clips = []
-    for path in scene_paths:
-        try:
-            clip = VideoFileClip(path)
-            final_clips.append(clip)
-        except Exception as e:
-            print(f"Error loading {path}: {str(e)}")
-            continue
-    
+        final_clips.append(clip)
+        print(f"클립 {len(final_clips)} 생성 완료")
+
     if final_clips:
         final_video = concatenate_videoclips(final_clips)
     else:
         raise Exception("No valid video clips found to concatenate")
-    
+
     # 최종 영상 저장
     output_path = os.path.join(OUTPUT_DIR, "final_video.mp4")
     final_video.write_videofile(output_path, fps=24)
-    
+
     # 메모리 정리
     for clip in final_clips:
         clip.close()
-        
+
     print(f"최종 동영상 생성 완료: {output_path}")
 
 if __name__ == "__main__":
     command = input("1.영상 제작 2.스크립트 대사 분리 3.파일 정렬")
     if command == "1":
-        os.makedirs(OUTPUT_DIR, exist_ok=True)  # 출력 디렉토리 생성
         main()
     elif command == "2":
         spliter("example.txt", "output.txt")
