@@ -52,8 +52,7 @@ def parse_script(script_file):
     """스크립트 파일을 읽어 블록 요소와 스크립트 줄을 분리"""
     with open(script_file, "r", encoding="utf-8") as file:
         lines = file.readlines()
-    
-    block_elements = []
+        
     script_lines = []
     
     for line in lines:
@@ -62,17 +61,19 @@ def parse_script(script_file):
             if line.startswith("//"): # 주석->무시함
                 pass
             elif line.startswith("#"): # 블록 요소 처리
-                block_elements.append(line[1:].strip())  # # 제거하고 저장
+                script_lines.append({"block":line[1:].strip()})  # # 제거하고 저장
             else:
                 character, dialogue, effect = line.split(":", 2)
-                script_lines.append((character, dialogue, effect))
+                script_lines.append({"line":(character, dialogue, effect)})
     
-    return block_elements, script_lines
+    return script_lines
 
 def create_clip(character=None, effect=None, dialogue=None, char_line_path=None, char_image_path=None, **kwargs):
     """캐릭터 이미지와 대사를 사용하여 개별 클립 생성"""
+    
     video_clip = []
     audio_clip = []
+    
 
     # 음성 파일 로드
     char_line_clip = AudioFileClip(char_line_path).with_effects([afx.MultiplyVolume(2.0)])
@@ -144,30 +145,43 @@ def main():
 
     # 스크립트 파일 읽기
     script = parse_script(SCRIPT_FILE)
-
+    print(script)
+    
     final_clips = []
     line_count = 1
 
-    for character, dialogue, effect in script:
-        char_line_path = os.path.join(LINE_DIR, f"{line_count:04d}.wav") if dialogue != "None" else None
-        if dialogue != "None":
-            line_count += 1
-
-        char_image_path = os.path.join(CHARACTER_DIR, f"{character}.png") if character != "None" else None
-
-        clip = create_clip(character=character,
-                         effect=effect,
-                         dialogue=dialogue,
-                         char_line_path=char_line_path if char_line_path is not None else None,
-                         char_image_path=char_image_path if char_image_path is not None else None)
-
-        final_clips.append(clip)
-        print(f"클립 {len(final_clips)} 생성 완료")
-
-    if final_clips:
-        final_video = concatenate_videoclips(final_clips)
-    else:
-        raise Exception("No valid video clips found to concatenate")
+    for line in script:
+        if "block" in line.keys():
+            global BGM_FILE
+            global BACKGROUND_FILE
+            token = line["block"].split("=")
+            if token[0] == "bgm":
+                BGM_FILE = token[1]
+            elif token[0] == "background":
+                BACKGROUND_FILE = token[1]
+                
+        elif "line" in line.keys():
+            token = line["line"]
+            for character, dialogue, effect in token:
+                char_line_path = os.path.join(LINE_DIR, f"{line_count:04d}.wav") if dialogue != "None" else None
+                if dialogue != "None":
+                    line_count += 1
+        
+                char_image_path = os.path.join(CHARACTER_DIR, f"{character}.png") if character != "None" else None
+        
+                clip = create_clip(character=character,
+                                 effect=effect,
+                                 dialogue=dialogue,
+                                 char_line_path=char_line_path if char_line_path is not None else None,
+                                 char_image_path=char_image_path if char_image_path is not None else None)
+        
+                final_clips.append(clip)
+                print(f"클립 {len(final_clips)} 생성 완료")
+        
+            if final_clips:
+                final_video = concatenate_videoclips(final_clips)
+            else:
+                raise Exception("No valid video clips found to concatenate")
 
     # 최종 영상 저장
     output_path = os.path.join(OUTPUT_DIR, "final_video.mp4")
@@ -178,7 +192,7 @@ def main():
         clip.close()
 
     print(f"최종 동영상 생성 완료: {output_path}")
-
+    
 if __name__ == "__main__":
     command = input("1.영상 제작 2.스크립트 대사 분리 3.파일 정렬")
     if command == "1":
