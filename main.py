@@ -161,11 +161,10 @@ def main():
                 BACKGROUND_FILE = token[1]
                 
         elif "line" in line.keys():
-            token = line["line"]
-            for character, dialogue, effect in token:
-                char_line_path = os.path.join(LINE_DIR, f"{line_count:04d}.wav") if dialogue != "None" else None
-                if dialogue != "None":
-                    line_count += 1
+            character, dialogue, effect = line["line"]
+            char_line_path = os.path.join(LINE_DIR, f"{line_count:04d}.wav") if dialogue != "None" else None
+            if dialogue != "None":
+                line_count += 1
         
                 char_image_path = os.path.join(CHARACTER_DIR, f"{character}.png") if character != "None" else None
         
