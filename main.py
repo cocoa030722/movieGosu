@@ -5,6 +5,8 @@ from script_spliter import spliter
 from filesort import file_sort
 from effect import audio_effect, highlight
 
+from lark import Lark, Transformer
+
 from moviepy import *
 
 # 캐릭터:정보 대응표
@@ -47,6 +49,44 @@ BACKGROUND_FILE = "background1.webp"
 
 # bgm의 시작 지점을 기록하는 변수
 bgm_start = 0
+
+
+
+
+# Lark 문법 정의
+grammar = r"""
+    start: (config | dialogue | comment)*
+
+    config: "#" VAR ":" VALUE
+    dialogue: CHARACTER "-" EMOTION ":" TEXT ":" EFFECT
+
+    comment: /\/\/[^\n]*/  -> ignore_comment
+
+    CHARACTER: /[a-zA-Z가-힣0-9_]+/
+    EMOTION: /[a-zA-Z가-힣0-9_]+/
+    TEXT: /[^:\n]+/
+    EFFECT: /[^:\n]+/
+    VAR: /[a-zA-Z가-힣0-9_]+/
+    VALUE: /[^:\n]+/
+
+    %import common.WS
+    %ignore WS
+"""
+
+# Transformer를 사용하여 파싱된 트리를 변환
+class ScriptTransformer(Transformer):
+    def config(self, items):
+        var, value = items
+        return {"type": "config", "var": var, "value": value}
+
+    def dialogue(self, items):
+        character, emotion, text, effect = items
+        return {"type": "dialogue", "character": character, "emotion": emotion, "text": text, "effect": effect}
+
+    def ignore_comment(self, _):
+        return None  # 주석 무시
+
+
 
 def parse_script(script_file):
     """스크립트 파일을 읽어 블록 요소와 스크립트 줄을 분리"""
@@ -143,6 +183,21 @@ def main():
     """메인 함수: 스크립트를 읽고 영상을 생성"""
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+    # 파서 생성
+    parser = Lark(grammar, start="start", parser="lalr", transformer=ScriptTransformer())
+
+    # 테스트 입력
+    with open(SCRIPT_FILE, "r", encoding="utf-8") as file:
+        raw_script = file.read()
+
+    print(raw_script)
+    
+    # 파싱 실행
+    parsed_data = parser.parse(raw_script)
+
+    # vktldgks ahems xhzmsdmf cnffur 출력
+    print(parsed_data)
+    '''
     # 스크립트 파일 읽기
     script = parse_script(SCRIPT_FILE)
     print(script)
@@ -151,10 +206,11 @@ def main():
     line_count = 1
 
     for line in script:
+        print(line)
         if "block" in line.keys():
             global BGM_FILE
             global BACKGROUND_FILE
-            token = line["block"].split("=")
+            token = line["block"].split(":")
             if token[0] == "bgm":
                 BGM_FILE = token[1]
             elif token[0] == "background":
@@ -191,6 +247,7 @@ def main():
         clip.close()
 
     print(f"최종 동영상 생성 완료: {output_path}")
+    '''
     
 if __name__ == "__main__":
     command = input("1.영상 제작 2.스크립트 대사 분리 3.파일 정렬")
