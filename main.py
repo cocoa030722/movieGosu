@@ -1,11 +1,10 @@
 import os
+import re
 
 from numpy import char
 from script_spliter import spliter
 from filesort import file_sort
 from effect import audio_effect, highlight
-
-from lark import Lark, Transformer
 
 from moviepy import *
 
@@ -50,70 +49,52 @@ BACKGROUND_FILE = "background1.webp"
 # bgm의 시작 지점을 기록하는 변수
 bgm_start = 0
 
+def parse_script() -> list[dict]:
+    # 정규 표현식 패턴 정의
+    comment_pattern = re.compile(r"^\s*//")  # 주석
+    config_pattern = re.compile(r"^\s*#\s*(\w+)\s*:\s*(.+)")  # 설정 변수
+    dialogue_pattern = re.compile(r"^\s*([\w가-힣]+)-([\w가-힣]+):(.+):(.+)")  # 대사
+    
+    parsed_data = []
 
-
-
-# Lark 문법 정의
-grammar = r"""
-    start: (config | dialogue | comment)*
-
-    config: "#" VAR ":" VALUE
-    dialogue: CHARACTER "-" EMOTION ":" TEXT ":" EFFECT
-
-    comment: /\/\/[^\n]*/  -> ignore_comment
-
-    CHARACTER: /[a-zA-Z가-힣0-9_]+/
-    EMOTION: /[a-zA-Z가-힣0-9_]+/
-    TEXT: /[^:\n]+/
-    EFFECT: /[^:\n]+/
-    VAR: /[a-zA-Z가-힣0-9_]+/
-    VALUE: /[^:\n]+/
-
-    %import common.WS
-    %ignore WS
-"""
-
-# Transformer를 사용하여 파싱된 트리를 변환
-class ScriptTransformer(Transformer):
-    def config(self, items):
-        var, value = items
-        return {"type": "config", "var": var, "value": value}
-
-    def dialogue(self, items):
-        character, emotion, text, effect = items
-        return {"type": "dialogue", "character": character, "emotion": emotion, "text": text, "effect": effect}
-
-    def ignore_comment(self, _):
-        return None  # 주석 무시
-
-
-
-def parse_script(script_file):
-    """스크립트 파일을 읽어 블록 요소와 스크립트 줄을 분리"""
-    with open(script_file, "r", encoding="utf-8") as file:
+    with open(SCRIPT_FILE, "r", encoding="utf-8") as file:
         lines = file.readlines()
-        
-    script_lines = []
     
-    for line in lines:
-        line = line.strip()
-        if line:
-            if line.startswith("//"): # 주석->무시함
-                pass
-            elif line.startswith("#"): # 블록 요소 처리
-                script_lines.append({"block":line[1:].strip()})  # # 제거하고 저장
-            else:
-                character, dialogue, effect = line.split(":", 2)
-                script_lines.append({"line":(character, dialogue, effect)})
-    
-    return script_lines
+    for line in lines:  # 스크립트를 줄 단위로 읽음
+        line = line.strip()  # 공백 제거
 
+        if not line or comment_pattern.match(line):  
+            continue  # 빈 줄 또는 주석이면 무시
+
+        # 설정 변수 파싱
+        config_match = config_pattern.match(line)
+        if config_match:
+            var, value = config_match.groups()
+            parsed_data.append({"type": "config", "var": var, "value": value})
+            continue
+
+        # 대사 파싱
+        dialogue_match = dialogue_pattern.match(line)
+        if dialogue_match:
+            character, emotion, text, effect = dialogue_match.groups()
+            parsed_data.append({
+                "type": "dialogue",
+                "character": character,
+                "emotion": emotion,
+                "text": text.strip(),
+                "effect": effect.strip()
+            })
+            continue
+
+        # 규칙에 맞지 않는 경우 오류 출력
+        print(f"Warning: '{line}'은(는) 인식할 수 없는 형식입니다.")
+
+    return parsed_data
 def create_clip(character=None, effect=None, dialogue=None, char_line_path=None, char_image_path=None, **kwargs):
     """캐릭터 이미지와 대사를 사용하여 개별 클립 생성"""
     
     video_clip = []
     audio_clip = []
-    
 
     # 음성 파일 로드
     char_line_clip = AudioFileClip(char_line_path).with_effects([afx.MultiplyVolume(2.0)])
@@ -182,47 +163,41 @@ def create_clip(character=None, effect=None, dialogue=None, char_line_path=None,
 def main():
     """메인 함수: 스크립트를 읽고 영상을 생성"""
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-    # 파서 생성
-    parser = Lark(grammar, start="start", parser="lalr", transformer=ScriptTransformer())
-
-    # 테스트 입력
-    with open(SCRIPT_FILE, "r", encoding="utf-8") as file:
-        raw_script = file.read()
-
-    print(raw_script)
     
     # 파싱 실행
-    parsed_data = parser.parse(raw_script)
-
-    # vktldgks ahems xhzmsdmf cnffur 출력
-    print(parsed_data)
-    '''
-    # 스크립트 파일 읽기
-    script = parse_script(SCRIPT_FILE)
-    print(script)
+    parsed_output = parse_script()
+    print(parsed_output)
     
     final_clips = []
     line_count = 1
 
-    for line in script:
+    for line in parsed_output:
         print(line)
-        if "block" in line.keys():
+        if line["type"] == "config":
             global BGM_FILE
             global BACKGROUND_FILE
-            token = line["block"].split(":")
-            if token[0] == "bgm":
-                BGM_FILE = token[1]
-            elif token[0] == "background":
-                BACKGROUND_FILE = token[1]
+            global bgm_start
+            
+            if line["var"] == "bgm":
+                BGM_FILE = line["value"]
+                bgm_start = 0
+            elif line["var"] == "background":
+                BACKGROUND_FILE = line["value"]
                 
-        elif "line" in line.keys():
-            character, dialogue, effect = line["line"]
-            char_line_path = os.path.join(LINE_DIR, f"{line_count:04d}.wav") if dialogue != "None" else None
-            if dialogue != "None":
+        elif line["type"] == "dialogue":
+            
+            character = line["character"]
+            dialogue = line["text"]
+            emotion = line["emotion"]
+            effect = line["effect"]
+            
+            char_line_path = os.path.join(LINE_DIR, f"{line_count:04d}.wav") if dialogue != "None" or dialogue != "" else None
+            if dialogue != "None" or dialogue != "":
                 line_count += 1
-        
-                char_image_path = os.path.join(CHARACTER_DIR, f"{character}.png") if character != "None" else None
+                if os.path.exists(os.path.join(CHARACTER_DIR, f"{character}-{emotion}.png")):
+                    char_image_path = os.path.join(CHARACTER_DIR, f"{character}-{emotion}.png") if character != "None" else None
+                else:
+                    char_image_path = os.path.join(CHARACTER_DIR, f"{character}-기본.png") if character != "None" else None
         
                 clip = create_clip(character=character,
                                  effect=effect,
@@ -247,7 +222,7 @@ def main():
         clip.close()
 
     print(f"최종 동영상 생성 완료: {output_path}")
-    '''
+    
     
 if __name__ == "__main__":
     command = input("1.영상 제작 2.스크립트 대사 분리 3.파일 정렬")
