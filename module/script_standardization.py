@@ -1,4 +1,4 @@
-from googletrans import Translator
+from deep_translator import GoogleTranslator
 
 async def standardization(input_file:str, output_file:str):
     """
@@ -10,7 +10,7 @@ async def standardization(input_file:str, output_file:str):
     }
 
     # 번역기 객체 생성
-    translator = Translator()
+    translator = GoogleTranslator(source='ko', target='ja')
 
     # 입력 파일 이름
     input_file = input_file
@@ -33,9 +33,9 @@ async def standardization(input_file:str, output_file:str):
             character, dialogue, _ = line.split(":", 2)
             character=character.split("-")[0]
             print(character, ", ", dialogue)
-            translated = await translator.translate(dialogue.strip(), src='ko', dest='ja')
-            print(translated.text)
-            parts.append(f"{char_table[character]},{translated.text}")
+            translated = translator.translate(dialogue.strip())
+            print(translated)
+            parts.append(f"{char_table[character]},{translated}")
 
     # 파일 저장
     with open(output_file, 'w', encoding='utf-8') as file1:
