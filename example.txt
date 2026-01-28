@@ -1,0 +1,8 @@
+// scene 1
+# background:background1.webp
+# bgm:Usagi Flap.mp3
+
+메탄-기본:퀵 정렬은 우선 배열 원소 중에서 기준이 되는 피벗을 선택해.:none
+츠무기-기본:그런데 그 피벗은 어떤 기준으로 정하는 거야?:none
+메탄-기본:음... 적당히?:none
+츠무기-기본:뭐야 그게? 그렇게 대충 정해도 되는 거야?:none
