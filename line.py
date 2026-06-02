@@ -49,13 +49,11 @@ class Dialogue(Line):
 
         # 조건에 맞는 파일 찾기
         for filename in os.listdir(LINE_DIR):
-            # 파일 내 "000_(일본어 이름)"으로 시작하는 파일이 있는지를 찾음
-            if filename.startswith(f"{line_count:03d}_{char_table[self.character]["jpn_name"]}"):
-                # 있으면 기록
+            if filename.startswith(f"{line_count:04d}"):
                 char_line_path = os.path.join(LINE_DIR, filename)
                 break
         else:
-            raise FileNotFoundError(f"No file found.")
+            raise FileNotFoundError(f"Line {line_count}에 대응하는 음성 파일을 찾을 수 없습니다.")
 
         if self.text != "": # 비어 있지 않을 시
             line_count += 1

@@ -20,7 +20,7 @@ char_table = {
 }
 
 # 음성 파일 및 캐릭터 이미지 경로 설정
-LINE_DIR = "./audio/raw_voice"  # 대사 파일 디렉토리
+LINE_DIR = "./audio/line"  # 대사 파일 디렉토리
 BGM_DIR = "./audio/bgm"  # bgm 파일 디렉토리
 AUDIO_EFFECT_DIR = "./audio/effect"  # 음향효과 디렉토리
 CHARACTER_DIR = "./images/character"  # 캐릭터 이미지 디렉토리
